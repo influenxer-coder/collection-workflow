@@ -1,0 +1,21 @@
+{
+	"Comment": "A state machine that performs analytics on url",
+	"StartAt": "Process Events",
+	"States": {
+        "Process Events": {
+            "Type": "Task",
+            "Next": "Process Input",
+            "Resource": "${ProcessEventsFunctionArn}"
+        },
+		"Process Input": {
+            "Type": "Task",
+            "Next": "Extract Keywords",
+            "Resource": "${ProcessInputFunctionArn}"
+        },
+        "Extract Keywords": {
+            "Type": "Task",
+            "Resource": "${ExtractKeywordsFunctionArn}",
+            "End": true
+        }
+	}
+}

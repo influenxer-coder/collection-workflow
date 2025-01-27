@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Keyword Extraction Workflow
+
+
+Resources:
+  StateMachineLogs:
+    Type: AWS::Logs::LogGroup
+
+  ### Lambda Functions ###
+  ProcessEventsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      CodeUri: src/process_events/
+      Policies: AWSLambdaBasicExecutionRole
+  ProcessInputFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      CodeUri: src/process_input/
+      Policies: AWSLambdaBasicExecutionRole
+
+  ExtractKeywordsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      CodeUri: src/extract_keywords/
+      Policies: AWSLambdaBasicExecutionRole
+
+  ### State Machine ###
+  StateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      DefinitionUri: ./state-machine/validator.asl.json
+      DefinitionSubstitutions:
+        ProcessInputFunctionArn: !GetAtt ProcessInputFunction.Arn
+        ExtractKeywordsFunctionArn: !GetAtt ExtractKeywordsFunction.Arn
+        ProcessEventsFunctionArn: !GetAtt ProcessEventsFunction.Arn
+      Events:
+        Trigger:
+          Type: CloudWatchEvent
+          Properties:
+            EventBusName: !Ref EventBus
+            Pattern:
+              source:
+                - tapestry.apiService
+              detail-type:
+                - "similar-videos-request"
+      Logging:
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt StateMachineLogs.Arn
+        IncludeExecutionData: true
+        Level: ALL
+
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref ProcessEventsFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref ProcessInputFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref ExtractKeywordsFunction
+        - CloudWatchLogsFullAccess
+
+Parameters:
+  EventBus:
+    Type: String
+    Default: tapestryEventBus
+    Description: "The name of the EventBridge event bus"
+
+Outputs:
+  StateMachineArn:
+    Description: "The ARN of the Analytics State Machine"
+    Value: !Ref StateMachine
