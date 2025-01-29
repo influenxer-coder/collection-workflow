@@ -1,18 +1,20 @@
-import boto3
 import json
-import os
 import logging
+import os
+
+import boto3
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 eventbridge = boto3.client('events')
 
+
 def put_event(event, context):
     try:
         body = json.loads(event.get("body", "{}"))
         detail = {
-            "url": body.get("url", "http://example.com")
+            "url": body.get("url", "https://example.com")
         }
 
         logger.info("Received request: %s", json.dumps(detail))
@@ -29,6 +31,7 @@ def put_event(event, context):
         )
         logger.info("Event sent successfully: %s", json.dumps(response))
 
+        logger.info('Time remaining: %d second(s)', (context.get_remaining_time_in_millis() / 1000))
         return {
             "statusCode": 200,
             "body": json.dumps({
