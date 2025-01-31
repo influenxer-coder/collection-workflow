@@ -10,17 +10,46 @@
     "Scrape Product Page": {
       "Type": "Task",
       "Next": "Summarize Product Details",
-      "Resource": "${ScrapeProductPageFunctionArn}"
+      "Resource": "${ScrapeProductPageFunctionArn}",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.errorInfo",
+          "Next": "Handle Error"
+        }
+      ]
     },
     "Summarize Product Details": {
       "Type": "Task",
       "Next": "Extract Keywords",
-      "Resource": "${SummarizeProductDetailsFunctionArn}"
+      "Resource": "${SummarizeProductDetailsFunctionArn}",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.errorInfo",
+          "Next": "Handle Error"
+        }
+      ]
     },
     "Extract Keywords": {
       "Type": "Task",
       "Resource": "${ExtractKeywordsFunctionArn}",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.errorInfo",
+          "Next": "Handle Error"
+        }
+      ],
       "End": true
+    },
+    "Handle Error": {
+      "Type": "Task",
+      "Resource": "${HandleErrorFunctionArn}",
+      "Next": "Fail State"
+    },
+    "Fail State": {
+      "Type": "Fail"
     }
   }
 }

@@ -9,8 +9,22 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
+def download_webpage(url):
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                      'Chrome/58.0.3029.110 Safari/537.3'
+    }
+    try:
+        response = requests.get(url, headers=headers, timeout=120)
+        response.raise_for_status()
+        return response
+    except requests.exceptions.RequestException as e:
+        logger.error(f"An error occurred while fetching the webpage: {e}")
+        raise e
+
+
 def scrape_product_page(url):
-    response = requests.get(url)
+    response = download_webpage(url)
     soup = BeautifulSoup(response.content, 'html.parser')
 
     # Extract all body text content
@@ -32,7 +46,7 @@ def lambda_handler(event, context):
 
     url = event.get("url", "https://www.example.com")
 
-    # TODO: handle edge case - url might not talk about any product
+    # TODO: if url is not provided throw an error
 
     body_content, image_urls, reviews = scrape_product_page(url)
 

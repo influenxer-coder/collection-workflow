@@ -25,7 +25,12 @@ own high engaging content
    sam build --use-container
    ```
 
-5. Deploy the first time using `--guided`. This can be skipped for subsequent times
+5. Test your Lambdas locally
+   ```
+   sam local invoke ExtractKeywordsFunction -e events/extract_keywords_event.json --env-vars env.json
+   ```
+
+6. Deploy the first time using `--guided`. This can be skipped for subsequent times
    ```
    sam deploy --parameter-overrides ParameterKey1=Value1 ParameterKey2=Value2
    ```
