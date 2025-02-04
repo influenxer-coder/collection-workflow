@@ -28,6 +28,7 @@ htmlcov/
 .cache
 
 # Environments
+env.json
 .env
 .venv
 env/

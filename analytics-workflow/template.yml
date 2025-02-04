@@ -8,20 +8,34 @@ Resources:
     Type: AWS::Logs::LogGroup
 
   ### Lambda Functions ###
-  ProcessEventsFunction:
+  RouteEventsFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: app.lambda_handler
       Runtime: python3.13
-      CodeUri: src/process_events/
+      CodeUri: src/route_events/
       Policies: AWSLambdaBasicExecutionRole
-  ProcessInputFunction:
+  
+  ScrapeProductPageFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: app.lambda_handler
       Runtime: python3.13
-      CodeUri: src/process_input/
+      CodeUri: src/scrape_product_page/
       Policies: AWSLambdaBasicExecutionRole
+      Timeout: 300
+
+  SummarizeProductDetailsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      CodeUri: src/summarize_product_details/
+      Policies: AWSLambdaBasicExecutionRole
+      Timeout: 120
+      Environment:
+        Variables:
+          API_KEY: !Sub "{{resolve:secretsmanager:tapestry/APIKey:SecretString:open_ai}}"
 
   ExtractKeywordsFunction:
     Type: AWS::Serverless::Function
@@ -30,6 +44,18 @@ Resources:
       Runtime: python3.13
       CodeUri: src/extract_keywords/
       Policies: AWSLambdaBasicExecutionRole
+      Timeout: 120
+      Environment:
+        Variables:
+          API_KEY: !Sub "{{resolve:secretsmanager:tapestry/APIKey:SecretString:open_ai}}"
+  
+  HandleErrorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      CodeUri: src/handle_error/
+      Policies: AWSLambdaBasicExecutionRole
 
   ### State Machine ###
   StateMachine:
@@ -37,9 +63,11 @@ Resources:
     Properties:
       DefinitionUri: ./state-machine/validator.asl.json
       DefinitionSubstitutions:
-        ProcessInputFunctionArn: !GetAtt ProcessInputFunction.Arn
+        RouteEventsFunctionArn: !GetAtt RouteEventsFunction.Arn
+        ScrapeProductPageFunctionArn: !GetAtt ScrapeProductPageFunction.Arn
+        SummarizeProductDetailsFunctionArn: !GetAtt SummarizeProductDetailsFunction.Arn
         ExtractKeywordsFunctionArn: !GetAtt ExtractKeywordsFunction.Arn
-        ProcessEventsFunctionArn: !GetAtt ProcessEventsFunction.Arn
+        HandleErrorFunctionArn: !GetAtt HandleErrorFunction.Arn
       Events:
         Trigger:
           Type: CloudWatchEvent
@@ -59,11 +87,15 @@ Resources:
 
       Policies:
         - LambdaInvokePolicy:
-            FunctionName: !Ref ProcessEventsFunction
+            FunctionName: !Ref RouteEventsFunction
         - LambdaInvokePolicy:
-            FunctionName: !Ref ProcessInputFunction
+            FunctionName: !Ref ScrapeProductPageFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref SummarizeProductDetailsFunction
         - LambdaInvokePolicy:
             FunctionName: !Ref ExtractKeywordsFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref HandleErrorFunction
         - CloudWatchLogsFullAccess
 
 Parameters:
