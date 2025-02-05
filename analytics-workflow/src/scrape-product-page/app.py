@@ -44,16 +44,17 @@ def scrape_product_page(url):
 def lambda_handler(event, context):
     logger.info('Received event: %s', json.dumps(event))
 
-    url = event.get("url", "https://www.example.com")
+    if "url" not in event:
+        logger.error(f"URL not provided: {json.dumps(event)}")
+        raise Exception("URL not provided")
 
-    # TODO: if url is not provided throw an error
-
+    url = event.get("url")
     body_content, image_urls, reviews = scrape_product_page(url)
+    # TODO: save the product details to the Database
 
     logger.info('Time remaining: %d second(s)', (context.get_remaining_time_in_millis() / 1000))
     return {
         "body_content": body_content,
-        "image_urls": image_urls,
         "reviews": reviews,
         "message": "Processed input successfully"
     }

@@ -3,6 +3,11 @@ Transform: AWS::Serverless-2016-10-31
 Description: "API Service to expose API endpoints and trigger events for the Analytics workflow"
 
 Resources:
+  ApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+
   TapestryEventBus:
     Type: AWS::Events::EventBus
     Properties:
@@ -11,6 +16,7 @@ Resources:
   ApiProcessor:
     Type: AWS::Serverless::Function
     Properties:
+      FunctionName: !Sub "${AWS::StackName}-ApiProcessor"
       Handler: app.put_event
       Runtime: python3.13
       CodeUri: .
@@ -33,8 +39,9 @@ Resources:
           Properties:
             Path: /similar-videos
             Method: POST
+            RestApiId: !Ref ApiGateway
 
 Outputs:
   ApiUrl:
     Description: "API Gateway URL"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+    Value: !Sub "https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod/"

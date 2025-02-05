@@ -6,67 +6,28 @@ Description: Keyword Extraction Workflow
 Resources:
   StateMachineLogs:
     Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "${AWS::StackName}-AnalyticsStateMachineLogs"
+      RetentionInDays: 30
 
-  ### Lambda Functions ###
-  RouteEventsFunction:
-    Type: AWS::Serverless::Function
+  WebhookApi:
+    Type: AWS::Serverless::Api
     Properties:
-      Handler: app.lambda_handler
-      Runtime: python3.13
-      CodeUri: src/route_events/
-      Policies: AWSLambdaBasicExecutionRole
-  
-  ScrapeProductPageFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: app.lambda_handler
-      Runtime: python3.13
-      CodeUri: src/scrape_product_page/
-      Policies: AWSLambdaBasicExecutionRole
-      Timeout: 300
-
-  SummarizeProductDetailsFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: app.lambda_handler
-      Runtime: python3.13
-      CodeUri: src/summarize_product_details/
-      Policies: AWSLambdaBasicExecutionRole
-      Timeout: 120
-      Environment:
-        Variables:
-          API_KEY: !Sub "{{resolve:secretsmanager:tapestry/APIKey:SecretString:open_ai}}"
-
-  ExtractKeywordsFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: app.lambda_handler
-      Runtime: python3.13
-      CodeUri: src/extract_keywords/
-      Policies: AWSLambdaBasicExecutionRole
-      Timeout: 120
-      Environment:
-        Variables:
-          API_KEY: !Sub "{{resolve:secretsmanager:tapestry/APIKey:SecretString:open_ai}}"
-  
-  HandleErrorFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: app.lambda_handler
-      Runtime: python3.13
-      CodeUri: src/handle_error/
-      Policies: AWSLambdaBasicExecutionRole
+      StageName: prod
 
   ### State Machine ###
   StateMachine:
     Type: AWS::Serverless::StateMachine
     Properties:
-      DefinitionUri: ./state-machine/validator.asl.json
+      Name: !Sub "${AWS::StackName}-AnalyticsStateMachine"
+      DefinitionUri: ./state-machine/analyzer.asl.json
       DefinitionSubstitutions:
         RouteEventsFunctionArn: !GetAtt RouteEventsFunction.Arn
         ScrapeProductPageFunctionArn: !GetAtt ScrapeProductPageFunction.Arn
         SummarizeProductDetailsFunctionArn: !GetAtt SummarizeProductDetailsFunction.Arn
         ExtractKeywordsFunctionArn: !GetAtt ExtractKeywordsFunction.Arn
+        BrightdataCallbackFunctionArn: !GetAtt BrightdataCallbackFunction.Arn
+        RankVidsFunctionArn: !GetAtt RankVidsFunction.Arn
         HandleErrorFunctionArn: !GetAtt HandleErrorFunction.Arn
       Events:
         Trigger:
@@ -95,8 +56,116 @@ Resources:
         - LambdaInvokePolicy:
             FunctionName: !Ref ExtractKeywordsFunction
         - LambdaInvokePolicy:
+            FunctionName: !Ref BrightdataCallbackFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref RankVidsFunction
+        - LambdaInvokePolicy:
             FunctionName: !Ref HandleErrorFunction
         - CloudWatchLogsFullAccess
+
+  ### Lambda Functions ###
+  RouteEventsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-RouteEventsFunction"
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      CodeUri: src/route-events/
+      Policies: AWSLambdaBasicExecutionRole
+  
+  ScrapeProductPageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-ScrapeProductPageFunction"
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      CodeUri: src/scrape-product-page/
+      Policies: AWSLambdaBasicExecutionRole
+      Timeout: 300
+
+  SummarizeProductDetailsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-SummarizeProductDetailsFunction"
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      CodeUri: src/summarize-product-details/
+      Policies: AWSLambdaBasicExecutionRole
+      Timeout: 120
+      Environment:
+        Variables:
+          API_KEY: !Sub "{{resolve:secretsmanager:tapestry/APIKey:SecretString:open_ai}}"
+
+  ExtractKeywordsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-ExtractKeywordsFunction"
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      CodeUri: src/extract-keywords/
+      Policies: AWSLambdaBasicExecutionRole
+      Timeout: 120
+      Environment:
+        Variables:
+          API_KEY: !Sub "{{resolve:secretsmanager:tapestry/APIKey:SecretString:open_ai}}"
+
+  BrightdataCallbackFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-BrightdataCallbackFunction"
+      CodeUri: src/brightdata-callback/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      Policies: AWSLambdaBasicExecutionRole
+      Environment:
+        Variables:
+          BEARER_TOKEN: !Sub "{{resolve:secretsmanager:tapestry/APIKey:SecretString:brightdata}}"
+          WEBHOOK_URL: !Sub "https://${WebhookApi}.execute-api.${AWS::Region}.amazonaws.com/prod/webhook"
+          LIMIT_RECORDS: 5
+
+  RankVidsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-RankVidsFunction"
+      CodeUri: src/rank-vids/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      Policies: AWSLambdaBasicExecutionRole
+      Environment:
+        Variables:
+          TOP_X: 50
+
+  HandleErrorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-HandleErrorFunction"
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      CodeUri: src/handle-error/
+      Policies: AWSLambdaBasicExecutionRole
+
+  ### Webhook Lambda ###
+  WebhookFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-WebhookFunction"
+      CodeUri: src/webhook/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+          - Effect: Allow
+            Action: states:SendTaskSuccess
+            ### Using `!GetAtt StateMachine.Arn` will create a circular dependency ###
+            Resource: !Sub "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${AWS::StackName}-AnalyticsStateMachine"
+      Events:
+        Webhook:
+          Type: Api
+          Properties:
+            Path: /webhook
+            Method: POST
+            RestApiId: !Ref WebhookApi
 
 Parameters:
   EventBus:
@@ -108,3 +177,7 @@ Outputs:
   StateMachineArn:
     Description: "The ARN of the Analytics State Machine"
     Value: !Ref StateMachine
+
+  WebhookUrl:
+    Description: "Webhook URL for the Brightdata API response"
+    Value: !Sub "https://${WebhookApi}.execute-api.${AWS::Region}.amazonaws.com/prod/webhook"

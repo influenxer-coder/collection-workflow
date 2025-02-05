@@ -41,6 +41,30 @@
           "Next": "Handle Error"
         }
       ],
+      "Next": "Brightdata Callback"
+    },
+    "Brightdata Callback": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
+      "Parameters": {
+        "FunctionName": "${BrightdataCallbackFunctionArn}",
+        "Payload": {
+          "taskToken.$": "$$.Task.Token",
+          "input.$": "$"
+        }
+      },
+      "Next": "Rank Videos",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.errorInfo",
+          "Next": "Handle Error"
+        }
+      ]
+    },
+    "Rank Videos": {
+      "Type": "Task",
+      "Resource": "${RankVidsFunctionArn}",
       "End": true
     },
     "Handle Error": {
