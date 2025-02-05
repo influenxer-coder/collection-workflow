@@ -1,0 +1,30 @@
+"""
+- url
+- post_id
+- post_type
+- description
+- create_time
+- digg_count
+- share_count
+- collect_count
+- comment_count
+- play_count
+- video_duration
+- preview_image
+- discovery_input.search_keyword
+- official_item
+- original_item
+- width
+- ratio
+- video_url
+- profile_followers
+- is_verified
+- region
+- music:
+    - authorname
+    - covermedium
+    - id
+    - original
+    - playurl
+    - title
+"""

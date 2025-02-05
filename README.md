@@ -34,3 +34,7 @@ own high engaging content
    ```
    sam deploy --parameter-overrides ParameterKey1=Value1 ParameterKey2=Value2
    ```
+   OR
+   ```
+   sam deploy --no-confirm-changeset --no-fail-on-empty-changeset
+   ```
