@@ -9,9 +9,9 @@ logger.setLevel(logging.INFO)
 TOP_X = int(os.getenv("TOP_X", 100))
 
 weights = {
-    "digg_count": 0.3,  # Likes
-    "comment_count": 0.2,  # Comments
-    "share_count": 0.2,  # Shares
+    "digg_count": 0.2,  # Likes
+    "comment_count": 0.4,  # Comments
+    "share_count": 0.3,  # Shares
     "play_count": 0.1  # Views
 }
 

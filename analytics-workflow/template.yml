@@ -121,7 +121,7 @@ Resources:
         Variables:
           BEARER_TOKEN: !Sub "{{resolve:secretsmanager:tapestry/APIKey:SecretString:brightdata}}"
           WEBHOOK_URL: !Sub "https://${WebhookApi}.execute-api.${AWS::Region}.amazonaws.com/prod/webhook"
-          LIMIT_RECORDS: 5
+          LIMIT_RECORDS: 50
 
   RankVidsFunction:
     Type: AWS::Serverless::Function
@@ -133,7 +133,7 @@ Resources:
       Policies: AWSLambdaBasicExecutionRole
       Environment:
         Variables:
-          TOP_X: 50
+          TOP_X: 100
 
   HandleErrorFunction:
     Type: AWS::Serverless::Function
