@@ -130,6 +130,7 @@ Resources:
       CodeUri: src/rank-vids/
       Handler: app.lambda_handler
       Runtime: python3.13
+      Timeout: 120
       Policies: AWSLambdaBasicExecutionRole
       Environment:
         Variables:
