@@ -11,14 +11,20 @@ logger.setLevel(logging.INFO)
 
 def download_webpage(url):
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
-                      'Chrome/58.0.3029.110 Safari/537.3'
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) '
+                      'Chrome/132.0.0.0 Safari/537.36',
+        'Accept-Language': 'da, en-gb, en',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Referer': 'https://www.google.com/'
     }
     try:
         response = requests.get(url, headers=headers, timeout=120)
         response.raise_for_status()
+        if len(response.content) < 100:
+            raise Exception(f"Page redirected: {response.content}")
         return response
-    except requests.exceptions.RequestException as e:
+    except Exception as e:
         logger.error(f"An error occurred while fetching the webpage: {e}")
         raise e
 
