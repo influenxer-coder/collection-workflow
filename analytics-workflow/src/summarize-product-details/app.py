@@ -19,7 +19,7 @@ def get_openai_completion(prompt):
     while True:
         try:
             response = client.chat.completions.create(
-                model="gpt-3.5-turbo",  # Or 'gpt-4' if you have access to it
+                model="gpt-4o",  # Or 'gpt-4' if you have access to it
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant."},
                     {"role": "user", "content": prompt},

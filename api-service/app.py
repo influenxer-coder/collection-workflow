@@ -13,10 +13,14 @@ eventbridge = boto3.client('events')
 def put_event(event, context):
     try:
         body = json.loads(event.get("body", "{}"))
-        detail = {
-            "url": body.get("url", "https://example.com")
-        }
+        
+        detail = {}
+        if "url" in body:
+            detail['url'] = body.get('url')
+        if "search_terms" in body:
+            detail['search_terms'] = body.get('search_terms', [])
 
+        
         logger.info("Received request: %s", json.dumps(detail))
 
         response = eventbridge.put_events(

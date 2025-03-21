@@ -1,14 +1,12 @@
 import json
 import logging
-import os
+from collections import Counter
 from datetime import datetime
 
 import pandas as pd
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-
-TOP_X = int(os.getenv("TOP_X", 100))
 
 weights = {
     "digg_count": 0.2,  # Likes
@@ -50,12 +48,7 @@ def clean_dataframe(df):
     else:
         df["hashtags"] = df["hashtags"].apply(lambda x: x if isinstance(x, list) else [])
 
-    # Handle no profile_biography
-    if "profile_biography" not in df.columns:
-        df["profile_biography"] = ""  # Add empty strings for all rows
-    else:
-        df["profile_biography"] = df["profile_biography"].fillna("")
-
+    df = df.fillna('')
     # Convert to integer
     count_columns = ["digg_count", "comment_count", "share_count", "play_count"]
     for col in count_columns:
@@ -91,12 +84,31 @@ def normalize_impact_scores(df):
 def drop_duplicates(df):
     return df.drop_duplicates(subset=['url'], keep='last')
 
+
+def filter_commercial_posts(df):
+    return df[df["commerce_info"] == "Paid partnership"]
+
+
+def filter_data(df):
+    df = filter_region(df, 'US')
+    # df = filter_commercial_posts(df)
+    return df
+
+
+def get_popular_posts(df):
+    # df = df[df['digg_count'] > 200]
+    df = df[df['play_count'] > 10000]
+    return df
+
+
 def re_rank_posts(posts):
     df = pd.DataFrame(posts)
 
-    df = filter_region(df, 'US')
+    df = filter_data(df)
     df = drop_duplicates(df)
     df = clean_dataframe(df)
+    df = get_popular_posts(df)
+
     df = calculate_impact_scores(df)
     df = normalize_impact_scores(df)
 
@@ -105,17 +117,25 @@ def re_rank_posts(posts):
     return sorted(ranked_posts, key=lambda x: x["normalized_score"], reverse=True)
 
 
+def rank_hashtags(posts):
+    all_hashtags = [hashtag for post in posts for hashtag in post.get("hashtags", [])]
+    hashtag_counts = Counter(all_hashtags)
+
+    return dict(sorted(hashtag_counts.items(), key=lambda x: x[1], reverse=True)[:20])
+
+
 def lambda_handler(event, context):
     logger.info("Received event: %s", json.dumps(event))
     posts = event.get('records', [])
+    posts = [post for post in posts if 'error' not in post]
 
     ranked_posts = re_rank_posts(posts)
 
-    # Select the top x most impactful posts
-    top_x_posts = ranked_posts[:TOP_X]
+    top_hashtags = rank_hashtags(ranked_posts)
 
     return {
-        "count": len(top_x_posts),
-        "posts": top_x_posts,
+        "count": len(ranked_posts),
+        "posts": ranked_posts,
+        "popular_hashtags": top_hashtags,
         "message": "Sorted posts successfully"
     }

@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: "API Service to expose API endpoints and trigger events for the Analytics workflow"
+Description: "API Service to expose API endpoints and trigger events for the Ingestion workflow"
 
 Resources:
   ApiGateway:
@@ -31,13 +31,13 @@ Resources:
       Environment:
         Variables:
           EVENT_BUS_NAME: !Ref TapestryEventBus
-          EVENT_DETAIL_TYPE: "similar-videos-request"
-          EVENT_SOURCE: "tapestry.apiService"
+          EVENT_DETAIL_TYPE: "collection-request"
+          EVENT_SOURCE: "tapestry.collection_service"
       Events:
         ApiEvent:
           Type: Api
           Properties:
-            Path: /similar-videos
+            Path: /collect
             Method: POST
             RestApiId: !Ref ApiGateway
 

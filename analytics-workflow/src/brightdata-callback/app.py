@@ -43,11 +43,16 @@ def trigger_api_request(task_token, payload):
 
 
 def get_payload(keywords):
+    search_terms = keywords.get("search_terms", None)
+    if search_terms is not None:
+        return [dict(search_keyword=term) for term in search_terms]
+    
+    
     descriptor = keywords.get("descriptor", "")
     features = keywords.get("features", [])
     search_terms = [descriptor]
     search_terms.extend([f"{descriptor} {feature}" for feature in features])
-
+    
     return [dict(search_keyword=term) for term in search_terms]
 
 
