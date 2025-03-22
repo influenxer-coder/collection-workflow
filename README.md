@@ -1,6 +1,6 @@
 # Collection Workflow
 
-Find inspirations and ideas to generate high performing content using trending videos from other influencers and your
+Workflow to find inspirations and ideas to generate high performing content using trending videos from other influencers and your
 own high engaging content
 
 ## Instructions
