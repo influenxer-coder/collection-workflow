@@ -37,7 +37,6 @@ venv/
 # AWS SAM
 .aws-sam/
 packaged.yaml
-samconfig.toml
 
 # PyCharm
 .idea/
