@@ -20,9 +20,9 @@ def lambda_handler(event, context):
             "body": json.dumps({"error": "Task Token is missing"})
         }
 
-    # Parse the webhook payload from the request body
+    # Parse the notification payload from the request body
     try:
-        payload = json.loads(event.get("body", "[]"))
+        payload = json.loads(event.get("body", "{}"))
     except json.JSONDecodeError:
         return {
             "statusCode": 400,
@@ -30,14 +30,10 @@ def lambda_handler(event, context):
         }
 
     # Notify the Step Function of success
-    output = {
-        "count": len(payload),
-        "records": payload,
-    }
     try:
         sfn_client.send_task_success(
             taskToken=task_token,
-            output=json.dumps(output)
+            output=json.dumps(payload)
         )
     except Exception as e:
         return {
@@ -51,5 +47,5 @@ def lambda_handler(event, context):
     # Return success response
     return {
         "statusCode": 200,
-        "body": json.dumps({"status": "SUCCESS"})
+        "body": json.dumps({"status": "SUCCESS", "notification": payload})
     }

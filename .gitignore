@@ -42,6 +42,9 @@ samconfig.toml
 # PyCharm
 .idea/
 
+# VS Code
+.vscode/
+
 # Jupyter Notebook
 .ipynb_checkpoints
 

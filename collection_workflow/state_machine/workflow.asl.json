@@ -1,0 +1,107 @@
+{
+    "Comment": "A state machine that performs analytics on url",
+    "StartAt": "Route Events",
+    "States": {
+        "Route Events": {
+            "Type": "Choice",
+            "Choices": [
+                {
+                    "Variable": "$.type",
+                    "StringEquals": "scrape",
+                    "Next": "Scrape Product Page"
+                },
+                {
+                    "Variable": "$.type",
+                    "StringEquals": "collect",
+                    "Next": "Brightdata Callback"
+                }
+            ],
+            "Default": "Handle Error"
+        },
+        "Scrape Product Page": {
+            "Type": "Task",
+            "Next": "Summarize Product Details",
+            "Resource": "${ScrapeProductPageFunctionArn}",
+            "Catch": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "ResultPath": "$.errorInfo",
+                    "Next": "Handle Error"
+                }
+            ]
+        },
+        "Summarize Product Details": {
+            "Type": "Task",
+            "Next": "Extract Keywords",
+            "Resource": "${SummarizeProductDetailsFunctionArn}",
+            "Catch": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "ResultPath": "$.errorInfo",
+                    "Next": "Handle Error"
+                }
+            ]
+        },
+        "Extract Keywords": {
+            "Type": "Task",
+            "Resource": "${ExtractKeywordsFunctionArn}",
+            "Catch": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "ResultPath": "$.errorInfo",
+                    "Next": "Handle Error"
+                }
+            ],
+            "Next": "Brightdata Callback"
+        },
+        "Brightdata Callback": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
+            "Parameters": {
+                "FunctionName": "${BrightdataCallbackFunctionArn}",
+                "Payload": {
+                    "taskToken.$": "$$.Task.Token",
+                    "input.$": "$"
+                }
+            },
+            "Next": "Clean Data",
+            "Catch": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "ResultPath": "$.errorInfo",
+                    "Next": "Handle Error"
+                }
+            ]
+        },
+        "Clean Data": {
+            "Type": "Task",
+            "Resource": "${CleanDataFunctionArn}",
+            "Catch": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "ResultPath": "$.errorInfo",
+                    "Next": "Handle Error"
+                }
+            ],
+            "End": true
+        },
+        "Handle Error": {
+            "Type": "Task",
+            "Resource": "${HandleErrorFunctionArn}",
+            "Next": "Fail State"
+        },
+        "Fail State": {
+            "Type": "Fail"
+        }
+    }
+}
