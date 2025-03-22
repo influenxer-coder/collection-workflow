@@ -1,11 +1,11 @@
 {
     "Comment": "A state machine that performs analytics on url",
-    "StartAt": "Route Events",
+    "StartAt": "Receive Events",
     "States": {
-        "Route Events": {
+        "Receive Events": {
             "Type": "Task",
-            "Next": "Scrape Product Page",
-            "Resource": "${RouteEventsFunctionArn}",
+            "Next": "Route Events",
+            "Resource": "${ReceiveEventsFunctionArn}",
             "Catch": [
                 {
                     "ErrorEquals": [
@@ -15,6 +15,22 @@
                     "Next": "Handle Error"
                 }
             ]
+        },
+        "Route Events": {
+            "Type": "Choice",
+            "Choices": [
+                {
+                    "Variable": "$.type",
+                    "StringEquals": "scrape",
+                    "Next": "Scrape Product Page"
+                },
+                {
+                    "Variable": "$.type",
+                    "StringEquals": "collect",
+                    "Next": "Brightdata Callback"
+                }
+            ],
+            "Default": "Handle Error"
         },
         "Scrape Product Page": {
             "Type": "Task",
@@ -68,7 +84,7 @@
                     "input.$": "$"
                 }
             },
-            "Next": "Rank Videos",
+            "Next": "Clean Data",
             "Catch": [
                 {
                     "ErrorEquals": [
@@ -79,9 +95,18 @@
                 }
             ]
         },
-        "Rank Videos": {
+        "Clean Data": {
             "Type": "Task",
-            "Resource": "${RankVidsFunctionArn}",
+            "Resource": "${CleanDataFunctionArn}",
+            "Catch": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "ResultPath": "$.errorInfo",
+                    "Next": "Handle Error"
+                }
+            ],
             "End": true
         },
         "Handle Error": {

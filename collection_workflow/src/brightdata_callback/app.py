@@ -9,7 +9,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 BEARER_TOKEN = os.getenv("BEARER_TOKEN", "")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
+NOTIFICATION_URL = os.getenv("NOTIFICATION_URL", "")
 LIMIT_RECORDS = int(os.getenv("LIMIT_RECORDS", 10))
 
 
@@ -24,8 +24,7 @@ def trigger_api_request(task_token, payload):
         "discover_by": "keyword",
         "include_errors": "true",
         "limit_per_input": f"{LIMIT_RECORDS}",
-        "endpoint": f"{WEBHOOK_URL}?taskToken={safe_token}",
-        "format": "json"
+        "notify": f"{NOTIFICATION_URL}?taskToken={safe_token}"
     }
 
     headers = {
@@ -42,12 +41,12 @@ def trigger_api_request(task_token, payload):
         raise e
 
 
-def get_payload(keywords):
-    search_terms = keywords.get("search_terms", None)
+def get_payload(event_input: dict):
+    search_terms = event_input.get("search_terms", None)
     if search_terms is not None:
         return [dict(search_keyword=term) for term in search_terms]
     
-    
+    keywords = event_input.get("keywords", {})
     descriptor = keywords.get("descriptor", "")
     features = keywords.get("features", [])
     search_terms = [descriptor]
@@ -60,10 +59,9 @@ def lambda_handler(event, context):
     logger.info("Received event: %s", json.dumps(event))
 
     event_input = event.get("input", {})
-    task_token = event.get("taskToken", {})
+    task_token = event.get("taskToken", "")
 
-    payload = get_payload(event_input.get("keywords", {}))
-
+    payload = get_payload(event_input)
     response = trigger_api_request(task_token, payload)
 
     logger.info('Time remaining: %d second(s)', (context.get_remaining_time_in_millis() / 1000))

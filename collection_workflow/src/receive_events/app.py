@@ -17,16 +17,16 @@ def lambda_handler(event, context):
     if url:
         return {
             'url': url,
-            'type': 'scrape'
-            'message': 'Processed events successfully'
+            'type': 'scrape',
+            'message': 'Received events successfully'
         }
     
     if search_terms:
         return {
-            'url': search_terms,
-            'type': 'collect'
-            'message': 'Processed events successfully'
+            'search_terms': search_terms,
+            'type': 'collect',
+            'message': 'Received events successfully'
         }
     
-    logger.error(f'Failed to fetch details from event: {str(event)}')
-    raise Exception('Failed to fetch details from event', event)
+    logger.error(f'Failed to fetch valid details from event: {str(event)}')
+    raise Exception('Failed to fetch valid details from event', event)
