@@ -41,4 +41,4 @@ jobs:
       # Deploy the SAM application
       - name: Deploy SAM application
         run: |
-          sam deploy --stack-name tapestry-collection-workflow --no-confirm-changeset --no-fail-on-empty-changeset
+          sam deploy --stack-name tapestry-collection-workflow --resolve-s3 --no-confirm-changeset --no-fail-on-empty-changeset
