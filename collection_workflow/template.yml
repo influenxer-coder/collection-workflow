@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: Data Collection workflow
 
@@ -8,6 +8,11 @@ Resources:
     Properties:
       LogGroupName: !Sub ${AWS::StackName}-CollectionStateMachineLogs
       RetentionInDays: 30
+
+  CollectionApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
 
   NotificationApi:
     Type: AWS::Serverless::Api
@@ -20,23 +25,12 @@ Resources:
     Properties:
       Name: !Sub ${AWS::StackName}-CollectionStateMachine
       DefinitionSubstitutions:
-        ReceiveEventsFunctionArn: !GetAtt ReceiveEventsFunction.Arn
         ScrapeProductPageFunctionArn: !GetAtt ScrapeProductPageFunction.Arn
         SummarizeProductDetailsFunctionArn: !GetAtt SummarizeProductDetailsFunction.Arn
         ExtractKeywordsFunctionArn: !GetAtt ExtractKeywordsFunction.Arn
         BrightdataCallbackFunctionArn: !GetAtt BrightdataCallbackFunction.Arn
         CleanDataFunctionArn: !GetAtt CleanDataFunction.Arn
         HandleErrorFunctionArn: !GetAtt HandleErrorFunction.Arn
-      Events:
-        Trigger:
-          Type: CloudWatchEvent
-          Properties:
-            EventBusName: !Ref EventBus
-            Pattern:
-              source:
-                - tapestry.collection_service
-              detail-type:
-                - collection-request
       Logging:
         Destinations:
           - CloudWatchLogsLogGroup:
@@ -45,8 +39,6 @@ Resources:
         Level: ALL
 
       Policies:
-        - LambdaInvokePolicy:
-            FunctionName: !Ref ReceiveEventsFunction
         - LambdaInvokePolicy:
             FunctionName: !Ref ScrapeProductPageFunction
         - LambdaInvokePolicy:
@@ -60,19 +52,9 @@ Resources:
         - LambdaInvokePolicy:
             FunctionName: !Ref HandleErrorFunction
         - CloudWatchLogsFullAccess
-      DefinitionUri: ./state_machine/analyzer.asl.json
+      DefinitionUri: ./state_machine/workflow.asl.json
 
-  ### Lambda Functions ###
-  ReceiveEventsFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub ${AWS::StackName}-ReceiveEventsFunction
-      Handler: app.lambda_handler
-      Runtime: python3.13
-      CodeUri: src/receive_events/
-      Policies:
-        - AWSLambdaBasicExecutionRole
-
+  ### Lambda Functions in State Machine ###
   ScrapeProductPageFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -96,7 +78,7 @@ Resources:
       Timeout: 120
       Environment:
         Variables:
-          API_KEY: !Sub '{{resolve:secretsmanager:tapestry/APIKey:SecretString:open_ai}}'
+          API_KEY: !Sub "{{resolve:secretsmanager:tapestry/APIKey:SecretString:open_ai}}"
 
   ExtractKeywordsFunction:
     Type: AWS::Serverless::Function
@@ -110,7 +92,7 @@ Resources:
       Timeout: 120
       Environment:
         Variables:
-          API_KEY: !Sub '{{resolve:secretsmanager:tapestry/APIKey:SecretString:open_ai}}'
+          API_KEY: !Sub "{{resolve:secretsmanager:tapestry/APIKey:SecretString:open_ai}}"
 
   BrightdataCallbackFunction:
     Type: AWS::Serverless::Function
@@ -122,7 +104,7 @@ Resources:
       Policies: AWSLambdaBasicExecutionRole
       Environment:
         Variables:
-          BEARER_TOKEN: !Sub '{{resolve:secretsmanager:tapestry/APIKey:SecretString:brightdata}}'
+          BEARER_TOKEN: !Sub "{{resolve:secretsmanager:tapestry/APIKey:SecretString:brightdata}}"
           NOTIFICATION_URL: !Sub https://${NotificationApi}.execute-api.${AWS::Region}.amazonaws.com/prod/notification
           LIMIT_RECORDS: 1000
 
@@ -138,7 +120,7 @@ Resources:
         - AWSLambdaBasicExecutionRole
       Environment:
         Variables:
-          BEARER_TOKEN: !Sub '{{resolve:secretsmanager:tapestry/APIKey:SecretString:brightdata}}'
+          BEARER_TOKEN: !Sub "{{resolve:secretsmanager:tapestry/APIKey:SecretString:brightdata}}"
 
   HandleErrorFunction:
     Type: AWS::Serverless::Function
@@ -148,6 +130,31 @@ Resources:
       Runtime: python3.13
       CodeUri: src/handle_error/
       Policies: AWSLambdaBasicExecutionRole
+
+  ### API Processor Lambda ###
+  CollectionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-ApiFunction
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      CodeUri: src/collection/
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action: states:StartExecution
+              Resource: !GetAtt StateMachine.Arn
+      Environment:
+        Variables:
+          STATE_MACHINE_ARN: !Ref StateMachine
+      Events:
+        Collection:
+          Type: Api
+          Properties:
+            Path: /collect
+            Method: POST
+            RestApiId: !Ref CollectionApi
 
   ### Notification Lambda ###
   NotificationFunction:
@@ -172,17 +179,11 @@ Resources:
             Method: POST
             RestApiId: !Ref NotificationApi
 
-Parameters:
-  EventBus:
-    Type: String
-    Default: tapestryEventBus
-    Description: The name of the EventBridge event bus
-
 Outputs:
   StateMachineArn:
     Description: The ARN of the Collection State Machine
     Value: !Ref StateMachine
 
-  NotificationUrl:
-    Description: Notification URL for the Brightdata API response
-    Value: !Sub https://${NotificationApi}.execute-api.${AWS::Region}.amazonaws.com/prod/notification
+  CollectionUrl:
+    Description: URL to trigger a Brightdata collection
+    Value: !Sub https://${CollectionApi}.execute-api.${AWS::Region}.amazonaws.com/prod/collect

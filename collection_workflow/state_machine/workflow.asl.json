@@ -1,21 +1,7 @@
 {
     "Comment": "A state machine that performs analytics on url",
-    "StartAt": "Receive Events",
+    "StartAt": "Route Events",
     "States": {
-        "Receive Events": {
-            "Type": "Task",
-            "Next": "Route Events",
-            "Resource": "${ReceiveEventsFunctionArn}",
-            "Catch": [
-                {
-                    "ErrorEquals": [
-                        "States.ALL"
-                    ],
-                    "ResultPath": "$.errorInfo",
-                    "Next": "Handle Error"
-                }
-            ]
-        },
         "Route Events": {
             "Type": "Choice",
             "Choices": [
