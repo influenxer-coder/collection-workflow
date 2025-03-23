@@ -1,9 +1,10 @@
 name: Deploy Collection Workflow to AWS
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - release  # Trigger on changes to the release branch
+      - release # Trigger on changes to the release branch
 
 jobs:
   deploy:
@@ -18,7 +19,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.13'
+          python-version: "3.13"
 
       # Install AWS SAM CLI
       - name: Install AWS SAM CLI
