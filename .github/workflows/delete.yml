@@ -24,4 +24,4 @@ jobs:
       # Delete the SAM application
       - name: Delete SAM application
         run: |
-          sam delete
+          sam delete --stack-name tapestry-collection-workflow
