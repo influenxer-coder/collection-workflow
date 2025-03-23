@@ -67,12 +67,25 @@ def restructure(df):
     df[numeric_columns] = df[numeric_columns].apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
     df = add_new_columns(df)
     # TODO: Remove these two line once we figure out automated pertinent video selection
-    df[array_columns] = df[array_columns].map(lambda x: str(x)).astype('string')
-    df[object_columns] = df[object_columns].map(lambda x: str(x)).astype('string')
+    df = restructure_records(df, array_columns, replace_with=list)
+    df = restructure_records(df, object_columns, replace_with=dict)
     
     df = df[string_columns + numeric_columns + array_columns + object_columns + new_columns]
     return df
 
+
+def restructure_records(df: pd.DataFrame, cols: List[str], replace_with) -> pd.DataFrame:
+    replacement = replace_with()
+        
+    for col in cols:
+        if col not in df.columns:
+            # Add the column if it doesn't exist
+            df[col] = [replacement for _ in range(len(df))]
+        else:
+            # Replace missing or non-list values with empty lists
+            df[col] = df[col].apply(lambda x: str(x) if isinstance(x, replace_with) else str(replacement)).astype('string')
+
+    return df
 
 def add_new_columns(df):
     """
@@ -190,6 +203,7 @@ def get_response(snapshot_id: str) -> List[dict]:
     
     try:
         response = requests.request("GET", brightdata_url, headers=headers, params=querystring)
+        response.raise_for_status()
         return response.json()
     except Exception as e:
         logger.error(f"Failed to fetch response from Brightdata - {str(e)}")
