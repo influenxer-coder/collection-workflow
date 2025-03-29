@@ -23,7 +23,8 @@ def lambda_handler(event, context):
             input['search_terms'] = body.get('search_terms', [])
             input['type'] = 'collect'
         else:
-            raise ValueError("Failed to process request body")
+            input['type'] = 'undefined'
+            input['body'] = body
 
         response = client.start_execution(
             stateMachineArn=os.environ['STATE_MACHINE_ARN'],

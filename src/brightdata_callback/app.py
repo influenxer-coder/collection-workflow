@@ -37,12 +37,16 @@ def trigger_api_request(task_token, payload):
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        logger.error(f"Error from Brightdata API call: {e}")
+        logger.error(f"Error from Brightdata API call: {str(e)}")
         raise e
 
 
 def get_payload(event_input: dict):
     search_terms = event_input.get("search_terms", None)
+    
+    if search_terms is not None and not isinstance(search_terms, list):
+        raise ValueError(f"search_terms must be a list")
+    
     if search_terms is not None:
         return [dict(search_keyword=term) for term in search_terms]
     
@@ -60,15 +64,19 @@ def lambda_handler(event, context):
 
     event_input = event.get("input", {})
     task_token = event.get("taskToken", "")
+    
+    try:
+        payload = get_payload(event_input)
+        response = trigger_api_request(task_token, payload)
 
-    payload = get_payload(event_input)
-    response = trigger_api_request(task_token, payload)
+        logger.info('Time remaining: %d second(s)', (context.get_remaining_time_in_millis() / 1000))
 
-    logger.info('Time remaining: %d second(s)', (context.get_remaining_time_in_millis() / 1000))
-
-    return {
-        "payload": payload,
-        "taskToken": task_token,
-        "brightdata_response": response,
-        "message": "Called brightdata API successfully"
-    }
+        return {
+            "payload": payload,
+            "taskToken": task_token,
+            "brightdata_response": response,
+            "message": "Called brightdata API successfully"
+        }
+    except Exception as e:
+        logger.error(f"Error in Brightdata Callback Lambda Function: {str(e)}")
+        raise e

@@ -1,0 +1,13 @@
+{
+  "status": "failure",
+  "executionId": "arn:aws:states:us-east-2:851725402763:execution:tapestry-collection-workflow-CollectionStateMachine:741e8658-4dcb-48f8-b280-529bcb7063df",
+  "details": {
+    "url": "https://www.sportsresearch.com/products/collagen-peptides-hydrolyzed-gelatin-2",
+    "type": "scrape",
+    "error": {
+      "Error": "AttributeError",
+      "Cause": "{\"errorMessage\": \"'NoneType' object has no attribute 'get_text'\", \"errorType\": \"AttributeError\", \"requestId\": \"63b080b9-8536-4a5a-bfd4-94364e31ced1\", \"stackTrace\": [\"  File \\\"/var/task/app.py\\\", line 58, in lambda_handler\\n    body_content, image_urls, reviews = scrape_product_page(url)\\n\", \"  File \\\"/var/task/app.py\\\", line 37, in scrape_product_page\\n    body_content = soup.body.get_text(separator=' ', strip=True)\\n\"]}"
+    }
+  },
+  "message": "Collection workflow failed in step: Notify Failure"
+}

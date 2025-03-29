@@ -1,5 +1,5 @@
 {
-    "Comment": "A state machine that performs analytics on url",
+    "Comment": "Collection Workflowstate machine",
     "StartAt": "Route Events",
     "States": {
         "Route Events": {
@@ -16,46 +16,82 @@
                     "Next": "Brightdata Callback"
                 }
             ],
-            "Default": "Handle Error"
+            "Default": "Notify Failure"
         },
         "Scrape Product Page": {
             "Type": "Task",
-            "Next": "Summarize Product Details",
             "Resource": "${ScrapeProductPageFunctionArn}",
+            "TimeoutSeconds": 60,
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "Lambda.ServiceException",
+                        "Lambda.AWSLambdaException",
+                        "Lambda.SdkClientException",
+                        "States.Timeout"
+                    ],
+                    "IntervalSeconds": 1,
+                    "MaxAttempts": 3,
+                    "BackoffRate": 2
+                }
+            ],
             "Catch": [
                 {
                     "ErrorEquals": [
                         "States.ALL"
                     ],
-                    "ResultPath": "$.errorInfo",
-                    "Next": "Handle Error"
+                    "ResultPath": "$.error",
+                    "Next": "Notify Failure"
                 }
-            ]
+            ],
+            "Next": "Summarize Product Details"
         },
         "Summarize Product Details": {
             "Type": "Task",
-            "Next": "Extract Keywords",
             "Resource": "${SummarizeProductDetailsFunctionArn}",
+            "TimeoutSeconds": 30,
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "States.TaskFailed"
+                    ],
+                    "IntervalSeconds": 2,
+                    "MaxAttempts": 2,
+                    "BackoffRate": 2
+                }
+            ],
             "Catch": [
                 {
                     "ErrorEquals": [
                         "States.ALL"
                     ],
-                    "ResultPath": "$.errorInfo",
-                    "Next": "Handle Error"
+                    "ResultPath": "$.error",
+                    "Next": "Notify Failure"
                 }
-            ]
+            ],
+            "Next": "Extract Keywords"
         },
         "Extract Keywords": {
             "Type": "Task",
             "Resource": "${ExtractKeywordsFunctionArn}",
+            "TimeoutSeconds": 30,
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "IntervalSeconds": 5,
+                    "MaxAttempts": 2,
+                    "BackoffRate": 2
+                }
+            ],
             "Catch": [
                 {
                     "ErrorEquals": [
                         "States.ALL"
                     ],
-                    "ResultPath": "$.errorInfo",
-                    "Next": "Handle Error"
+                    "ResultPath": "$.error",
+                    "Next": "Notify Failure"
                 }
             ],
             "Next": "Brightdata Callback"
@@ -67,41 +103,102 @@
                 "FunctionName": "${BrightdataCallbackFunctionArn}",
                 "Payload": {
                     "taskToken.$": "$$.Task.Token",
-                    "input.$": "$"
+                    "input.$": "$",
+                    "executionId.$": "$$.Execution.Id"
                 }
             },
-            "Next": "Clean Data",
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "States.Timeout",
+                        "States.TaskFailed"
+                    ],
+                    "IntervalSeconds": 10,
+                    "MaxAttempts": 3,
+                    "BackoffRate": 1.5
+                }
+            ],
             "Catch": [
                 {
                     "ErrorEquals": [
                         "States.ALL"
                     ],
-                    "ResultPath": "$.errorInfo",
-                    "Next": "Handle Error"
+                    "ResultPath": "$.error",
+                    "Next": "Notify Failure"
                 }
-            ]
+            ],
+            "Next": "Clean Data"
         },
         "Clean Data": {
             "Type": "Task",
             "Resource": "${CleanDataFunctionArn}",
+            "TimeoutSeconds": 30,
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "IntervalSeconds": 1,
+                    "MaxAttempts": 3,
+                    "BackoffRate": 2
+                }
+            ],
             "Catch": [
                 {
                     "ErrorEquals": [
                         "States.ALL"
                     ],
-                    "ResultPath": "$.errorInfo",
-                    "Next": "Handle Error"
+                    "ResultPath": "$.error",
+                    "Next": "Notify Failure"
+                }
+            ],
+            "Next": "Notify Success"
+        },
+        "Notify Success": {
+            "Type": "Task",
+            "Resource": "${NotifySlackFunction}",
+            "Parameters": {
+                "message": "Collection workflow completed successfully",
+                "status": "success",
+                "details.$": "$",
+                "executionId.$": "$$.Execution.Id"
+            },
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "Lambda.ServiceException",
+                        "Lambda.AWSLambdaException",
+                        "Lambda.SdkClientException"
+                    ],
+                    "IntervalSeconds": 2,
+                    "MaxAttempts": 3,
+                    "BackoffRate": 1.5
                 }
             ],
             "End": true
         },
-        "Handle Error": {
+        "Notify Failure": {
             "Type": "Task",
-            "Resource": "${HandleErrorFunctionArn}",
-            "Next": "Fail State"
-        },
-        "Fail State": {
-            "Type": "Fail"
+            "Resource": "${NotifySlackFunction}",
+            "Parameters": {
+                "message": "Collection workflow failed",
+                "status": "failure",
+                "details.$": "$",
+                "executionId.$": "$$.Execution.Id"
+            },
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "Lambda.ServiceException",
+                        "Lambda.AWSLambdaException",
+                        "Lambda.SdkClientException"
+                    ],
+                    "IntervalSeconds": 2,
+                    "MaxAttempts": 3,
+                    "BackoffRate": 1.5
+                }
+            ],
+            "End": true
         }
     }
 }

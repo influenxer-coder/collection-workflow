@@ -30,7 +30,7 @@ Resources:
         ExtractKeywordsFunctionArn: !GetAtt ExtractKeywordsFunction.Arn
         BrightdataCallbackFunctionArn: !GetAtt BrightdataCallbackFunction.Arn
         CleanDataFunctionArn: !GetAtt CleanDataFunction.Arn
-        HandleErrorFunctionArn: !GetAtt HandleErrorFunction.Arn
+        NotifySlackFunction: !GetAtt NotifySlackFunction.Arn
       Logging:
         Destinations:
           - CloudWatchLogsLogGroup:
@@ -50,7 +50,7 @@ Resources:
         - LambdaInvokePolicy:
             FunctionName: !Ref CleanDataFunction
         - LambdaInvokePolicy:
-            FunctionName: !Ref HandleErrorFunction
+            FunctionName: !Ref NotifySlackFunction
         - CloudWatchLogsFullAccess
       DefinitionUri: ./state_machine/workflow.asl.json
 
@@ -64,7 +64,7 @@ Resources:
       CodeUri: src/scrape_product_page/
       Policies:
         - AWSLambdaBasicExecutionRole
-      Timeout: 300
+      Timeout: 90
 
   SummarizeProductDetailsFunction:
     Type: AWS::Serverless::Function
@@ -75,10 +75,10 @@ Resources:
       CodeUri: src/summarize_product_details/
       Policies:
         - AWSLambdaBasicExecutionRole
-      Timeout: 120
+      Timeout: 90
       Environment:
         Variables:
-          API_KEY: !Sub "{{resolve:secretsmanager:tapestry/APIKey:SecretString:open_ai}}"
+          API_KEY: !Sub "{{resolve:secretsmanager:tapestry/secrets:SecretString:open_ai_api_key}}"
 
   ExtractKeywordsFunction:
     Type: AWS::Serverless::Function
@@ -89,10 +89,10 @@ Resources:
       CodeUri: src/extract_keywords/
       Policies:
         - AWSLambdaBasicExecutionRole
-      Timeout: 120
+      Timeout: 90
       Environment:
         Variables:
-          API_KEY: !Sub "{{resolve:secretsmanager:tapestry/APIKey:SecretString:open_ai}}"
+          API_KEY: !Sub "{{resolve:secretsmanager:tapestry/secrets:SecretString:open_ai_api_key}}"
 
   BrightdataCallbackFunction:
     Type: AWS::Serverless::Function
@@ -104,7 +104,7 @@ Resources:
       Policies: AWSLambdaBasicExecutionRole
       Environment:
         Variables:
-          BEARER_TOKEN: !Sub "{{resolve:secretsmanager:tapestry/APIKey:SecretString:brightdata}}"
+          BEARER_TOKEN: !Sub "{{resolve:secretsmanager:tapestry/secrets:SecretString:brightdata_bearer_token}}"
           NOTIFICATION_URL: !Sub https://${NotificationApi}.execute-api.${AWS::Region}.amazonaws.com/prod/notification
           LIMIT_RECORDS: 1000
 
@@ -115,21 +115,25 @@ Resources:
       CodeUri: src/clean_data/
       Handler: app.lambda_handler
       Runtime: python3.13
-      Timeout: 120
+      Timeout: 90
       Policies:
         - AWSLambdaBasicExecutionRole
       Environment:
         Variables:
-          BEARER_TOKEN: !Sub "{{resolve:secretsmanager:tapestry/APIKey:SecretString:brightdata}}"
+          BEARER_TOKEN: !Sub "{{resolve:secretsmanager:tapestry/secrets:SecretString:brightdata_bearer_token}}"
 
-  HandleErrorFunction:
+  NotifySlackFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${AWS::StackName}-HandleErrorFunction
+      CodeUri: src/notify_slack/
       Handler: app.lambda_handler
       Runtime: python3.13
-      CodeUri: src/handle_error/
-      Policies: AWSLambdaBasicExecutionRole
+      Timeout: 60
+      Environment:
+        Variables:
+          SLACK_WEBHOOK_URL: !Sub "{{resolve:secretsmanager:tapestry/secrets:SecretString:slack_webhook_url}}"
+      Policies:
+        - AWSLambdaBasicExecutionRole
 
   ### API Processor Lambda ###
   CollectionFunction:
@@ -139,6 +143,7 @@ Resources:
       Handler: app.lambda_handler
       Runtime: python3.13
       CodeUri: src/collection/
+      Timeout: 60
       Policies:
         - AWSLambdaBasicExecutionRole
         - Statement:
@@ -164,6 +169,7 @@ Resources:
       CodeUri: src/notification/
       Handler: app.lambda_handler
       Runtime: python3.13
+      Timeout: 90
       Policies:
         - AWSLambdaBasicExecutionRole
         - Statement:
