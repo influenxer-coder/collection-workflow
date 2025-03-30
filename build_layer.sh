@@ -30,17 +30,18 @@ unzip chromedriver.zip -d layer/bin/
 rm chromedriver.zip
 chmod +x layer/bin/chromedriver-linux64/chromedriver
 
-echo "Install missing libraries..."
-
+# Install missing dependencies directly on your system
+echo "Installing missing libraries..."
 sudo apt-get update
-sudo apt-get install -y libnss3 libnssutil3 libnspr4 libxcb1
+sudo apt-get install -y libnss3 libnspr4 libxcb1
 
+# Copy the libraries to the layer folder, force replacing them if they exist
 echo "Copying required libraries to the layer (force replace)..."
 sudo cp -f /usr/lib/x86_64-linux-gnu/libnss3.so layer/lib/
-sudo cp -f /usr/lib/x86_64-linux-gnu/libnssutil3.so layer/lib/
 sudo cp -f /usr/lib/x86_64-linux-gnu/libnspr4.so layer/lib/
 sudo cp -f /usr/lib/x86_64-linux-gnu/libxcb.so.1 layer/lib/
 
+# Verify the libraries are copied
 echo "Libraries installed:"
 ls -lah layer/lib/
 
