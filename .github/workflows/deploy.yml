@@ -34,6 +34,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Run build_layer.sh to build the layer
+        run: |
+          chmod +x ./build_layer.sh
+          ./build_layer.sh
+
       # Build the SAM application
       - name: Build SAM application
         run: |

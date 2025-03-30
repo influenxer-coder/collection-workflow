@@ -19,6 +19,17 @@ Resources:
     Properties:
       StageName: prod
 
+  ### Lambda Layer ###
+  ChromiumLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: ChromiumLayer
+      Description: "Custom Chromium and ChromeDriver for AWS Lambda"
+      ContentUri: layer/
+      CompatibleRuntimes:
+        - python3.13
+      RetentionPolicy: Retain
+
   ### State Machine ###
   StateMachine:
     Type: AWS::Serverless::StateMachine
@@ -65,6 +76,14 @@ Resources:
       Policies:
         - AWSLambdaBasicExecutionRole
       Timeout: 90
+      MemorySize: 2048
+      Environment:
+        Variables:
+          CHROME_BINARY: "/opt/bin/chrome-linux64/chrome"
+          DRIVER_PATH: "/opt/bin/chromedriver-linux64/chromedriver"
+      PackageType: Zip
+      Layers:
+        - !Ref ChromiumLayer
 
   SummarizeProductDetailsFunction:
     Type: AWS::Serverless::Function
