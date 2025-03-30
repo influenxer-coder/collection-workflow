@@ -32,14 +32,14 @@ chmod +x layer/bin/chromedriver-linux64/chromedriver
 
 echo "Install missing libraries..."
 
-apt-get update
-apt-get install -y libnss3 libnssutil3 libnspr4 libxcb1
+sudo apt-get update
+sudo apt-get install -y libnss3 libnssutil3 libnspr4 libxcb1
 
 echo "Copying required libraries to the layer (force replace)..."
-cp -f /usr/lib/x86_64-linux-gnu/libnss3.so layer/lib/
-cp -f /usr/lib/x86_64-linux-gnu/libnssutil3.so layer/lib/
-cp -f /usr/lib/x86_64-linux-gnu/libnspr4.so layer/lib/
-cp -f /usr/lib/x86_64-linux-gnu/libxcb.so.1 layer/lib/
+sudo cp -f /usr/lib/x86_64-linux-gnu/libnss3.so layer/lib/
+sudo cp -f /usr/lib/x86_64-linux-gnu/libnssutil3.so layer/lib/
+sudo cp -f /usr/lib/x86_64-linux-gnu/libnspr4.so layer/lib/
+sudo cp -f /usr/lib/x86_64-linux-gnu/libxcb.so.1 layer/lib/
 
 echo "Libraries installed:"
 ls -lah layer/lib/
