@@ -10,7 +10,7 @@ sfn_client = boto3.client("stepfunctions")
 
 
 def lambda_handler(event, context):
-    logger.info("Received event: %s", json.dumps(event))
+    logger.info("Event received: %s", json.dumps(event))
 
     # Parse the Task Token from the query string
     task_token = event.get("queryStringParameters", {}).get("taskToken")
@@ -45,7 +45,12 @@ def lambda_handler(event, context):
         }
 
     # Return success response
+    success_message = "Successfully received notifcation from Brightdata and send control back to Collection Step Function"
+    logger.info(f"{success_message}: Payload - {str(payload)}")
     return {
         "statusCode": 200,
-        "body": json.dumps({"status": "SUCCESS", "notification": payload})
+        "body": {
+            "status": "SUCCESS",
+            "notification": payload
+        }
     }

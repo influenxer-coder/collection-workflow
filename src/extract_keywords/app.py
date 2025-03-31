@@ -82,10 +82,7 @@ def lambda_handler(event, context):
     reviews_summary = event.get("reviews_summary", [])
 
     keywords = suggest_keywords(product_summary, reviews_summary)
-
-    logger.info('Time remaining: %d second(s)', (context.get_remaining_time_in_millis() / 1000))
-
+    logger.info("Extracted keywords successfully")
     return {
-        "keywords": keywords,
-        "message": "Extracted keywords successfully"
+        "keywords": keywords
     }

@@ -50,3 +50,6 @@ packaged.yaml
 # OS-specific files
 .DS_Store
 Thumbs.db
+
+# Layers
+layer/

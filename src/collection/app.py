@@ -9,12 +9,13 @@ logger.setLevel(logging.INFO)
 
 client = boto3.client("stepfunctions")
 
+
 def lambda_handler(event, context):
     try:
-        logger.info("Received request: %s", json.dumps(event))
-        
+        logger.info("Event received: %s", json.dumps(event))
+
         body = json.loads(event.get("body", "{}"))
-        
+
         input = {}
         if "url" in body:
             input['url'] = body.get('url')
@@ -30,22 +31,22 @@ def lambda_handler(event, context):
             stateMachineArn=os.environ['STATE_MACHINE_ARN'],
             input=json.dumps(input)
         )
-        logger.info("Event sent successfully: %s", str(response))
-        logger.info('Time remaining: %d second(s)', (context.get_remaining_time_in_millis() / 1000))
-        
+        success_message = "Collection triggered successfully"
+        logger.info("{success_message}: %s", str(response))
         return {
             "statusCode": 200,
             "body": json.dumps({
-                "message": "Collection triggered successfully",
+                "message": success_message,
                 "response": response['ResponseMetadata']
             })
         }
     except Exception as e:
-        logger.error("Failed to trigger collection: %s", str(e), exc_info=True)
+        err_message = "Failed to trigger collection"
+        logger.error(f"{err_message}", exc_info=True)
         return {
             "statusCode": 500,
             "body": json.dumps({
-                "message": "Failed to trigger collection",
+                "message": err_message,
                 "error": str(e)
             })
         }

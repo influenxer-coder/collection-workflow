@@ -30,7 +30,8 @@ Resources:
         ExtractKeywordsFunctionArn: !GetAtt ExtractKeywordsFunction.Arn
         BrightdataCallbackFunctionArn: !GetAtt BrightdataCallbackFunction.Arn
         CleanDataFunctionArn: !GetAtt CleanDataFunction.Arn
-        NotifySlackFunction: !GetAtt NotifySlackFunction.Arn
+        IngestDataFunctionArn: !GetAtt IngestDataFunction.Arn
+        NotifySlackFunctionArn: !GetAtt NotifySlackFunction.Arn
       Logging:
         Destinations:
           - CloudWatchLogsLogGroup:
@@ -49,6 +50,8 @@ Resources:
             FunctionName: !Ref BrightdataCallbackFunction
         - LambdaInvokePolicy:
             FunctionName: !Ref CleanDataFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref IngestDataFunction
         - LambdaInvokePolicy:
             FunctionName: !Ref NotifySlackFunction
         - CloudWatchLogsFullAccess
@@ -121,6 +124,20 @@ Resources:
       Environment:
         Variables:
           BEARER_TOKEN: !Sub "{{resolve:secretsmanager:tapestry/secrets:SecretString:brightdata_bearer_token}}"
+
+  IngestDataFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-IngestDataFunction
+      CodeUri: src/ingest_data/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      Timeout: 90
+      Policies:
+        - AWSLambdaBasicExecutionRole
+      Environment:
+        Variables:
+          API_BASE_URL: !Sub "{{resolve:secretsmanager:tapestry/secrets:SecretString:flask_app_base_url}}"
 
   NotifySlackFunction:
     Type: AWS::Serverless::Function

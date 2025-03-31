@@ -1,16 +1,16 @@
 {
-    "version": "0",
-    "id": "149bce83-761c-a3ba-cc1b-460feee4e7cd",
-    "detail-type": "collection-request",
-    "source": "tapestry.collection_service",
-    "account": "851725402763",
-    "time": "2025-03-21T22:12:09Z",
-    "region": "us-east-2",
-    "resources": [],
-    "detail": {
-        "search_terms": [
-            "Collagen Peptides",
-            "Vitamin D3"
-        ]
-    }
+  "version": "0",
+  "id": "149bce83-761c-a3ba-cc1b-460feee4e7cd",
+  "detail-type": "collection-request",
+  "source": "tapestry.collection_service",
+  "account": "851725402763",
+  "time": "2025-03-21T22:12:09Z",
+  "region": "us-east-2",
+  "resources": [],
+  "detail": {
+    "search_terms": [
+      "Collagen Peptides",
+      "Vitamin D3"
+    ]
+  }
 }

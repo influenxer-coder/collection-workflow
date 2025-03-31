@@ -1,12 +1,14 @@
 import json
-import requests
 import logging
 import os
+
+import requests
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL", None)
+
 
 def lambda_handler(event, context):
     """
@@ -20,21 +22,22 @@ def lambda_handler(event, context):
         Response dictionary with status code and message
     """
     logger.info(f"Event received: {json.dumps(event)}")
-    
+
     if not SLACK_WEBHOOK_URL:
         error_msg = "SLACK_WEBHOOK_URL is missing"
         logger.error(error_msg)
         raise ValueError(error_msg)
-    
+
     slack_message = generate_slack_message(event, context)
-    
+
     try:
         response = post_to_slack(SLACK_WEBHOOK_URL, slack_message)
-        logger.info(f"Message sent to Slack successfully: {str(response)}")
+        success_msg = "Notification sent to Slack successfully"
+        logger.info(f"{success_msg}: {str(response)}")
         return {
             "statusCode": 200,
             "body": {
-                "message": "Notification sent to Slack successfully"
+                "message": success_msg
             }
         }
     except Exception as error:
@@ -58,17 +61,16 @@ def generate_slack_message(event, context):
     status = event.get('status', 'unknown')
     details = event.get('details', {})
     execution_id = event.get('executionId', 'Unknown')
-    
+
     emoji = '✅' if status == 'success' else '❌'
-    
+
     error_section = ""
     if details and isinstance(details, dict) and details.get('error'):
         error_obj = details['error']
         if isinstance(error_obj, str):
             error_obj = {"message": error_obj}
-            
-        error_section = f"*Error Details*:\n```{json.dumps(error_obj, indent=2)}```"
 
+        error_section = f"*Error Details*:\n```{json.dumps(error_obj, indent=2)}```"
 
     display_execution_id = execution_id.split(':')[-1] if execution_id and ':' in execution_id else execution_id
     aws_region = context.invoked_function_arn.split(':')[3]
@@ -91,7 +93,7 @@ def generate_slack_message(event, context):
             }
         ]
     }
-    
+
     if error_section:
         slack_message["blocks"].append({
             "type": "section",
@@ -100,7 +102,7 @@ def generate_slack_message(event, context):
                 "text": error_section
             }
         })
-    
+
     return slack_message
 
 
@@ -118,8 +120,8 @@ def post_to_slack(webhook_url, message):
     Raises:
         Exception: If the request fails
     """
-    
-    headers={'Content-Type': 'application/json'}
+
+    headers = {'Content-Type': 'application/json'}
     try:
         response = requests.request("POST", webhook_url, json=message, headers=headers)
         response.raise_for_status()

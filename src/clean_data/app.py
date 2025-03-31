@@ -1,10 +1,10 @@
 import json
 import logging
 import os
-import requests
-
 from typing import List
+
 import pandas as pd
+import requests
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -54,7 +54,7 @@ new_columns = [
 ]
 
 
-def restructure(df):
+def restructure(df: pd.DataFrame):
     """
     Restructure the dataframe
     Args:
@@ -63,29 +63,34 @@ def restructure(df):
     Returns:
         df: A Pandas dataframe
     """
+    if df.empty:
+        return df
+
     df[string_columns] = df[string_columns].astype('string')
     df[numeric_columns] = df[numeric_columns].apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
     df = add_new_columns(df)
     # TODO: Remove these two line once we figure out automated pertinent video selection
     df = restructure_records(df, array_columns, replace_with=list)
     df = restructure_records(df, object_columns, replace_with=dict)
-    
+
     df = df[string_columns + numeric_columns + array_columns + object_columns + new_columns]
     return df
 
 
 def restructure_records(df: pd.DataFrame, cols: List[str], replace_with) -> pd.DataFrame:
     replacement = replace_with()
-        
+
     for col in cols:
         if col not in df.columns:
             # Add the column if it doesn't exist
             df[col] = [replacement for _ in range(len(df))]
         else:
             # Replace missing or non-list values with empty lists
-            df[col] = df[col].apply(lambda x: str(x) if isinstance(x, replace_with) else str(replacement)).astype('string')
+            df[col] = df[col].apply(lambda x: str(x) if isinstance(x, replace_with) else str(replacement)).astype(
+                'string')
 
     return df
+
 
 def add_new_columns(df):
     """
@@ -167,7 +172,7 @@ def fix_biography(biography):
     return biography.replace("\n", " ").replace("\r", " ")
 
 
-def fix_create_time(df):
+def fix_create_time(df: pd.DataFrame):
     """
     Fix the create_time column
     Args:
@@ -176,12 +181,14 @@ def fix_create_time(df):
     Returns:
         df: A Pandas dataframe
     """
+    if df.empty:
+        return df
     df["create_time"] = pd.to_datetime(df["create_time"], format="mixed", utc=True, errors="raise")
     df["create_time"] = df["create_time"].dt.tz_convert("UTC")
     return df
 
 
-def apply_filters(df):
+def apply_filters(df: pd.DataFrame):
     """
     Apply filters to the dataframe
     Args:
@@ -190,6 +197,9 @@ def apply_filters(df):
     Returns:
         df: A Pandas dataframe
     """
+    if df.empty:
+        return df
+
     df = df[df["region"] == filters["region"]]
     cutoff_date = pd.to_datetime(filters["create_time"], utc=True)
     df = df[df["create_time"] > cutoff_date]
@@ -198,9 +208,9 @@ def apply_filters(df):
 
 def get_response(snapshot_id: str) -> List[dict]:
     brightdata_url = f"https://api.brightdata.com/datasets/v3/snapshot/{snapshot_id}"
-    querystring = {"format":"json"}
+    querystring = {"format": "json"}
     headers = {"Authorization": f"Bearer {BEARER_TOKEN}"}
-    
+
     try:
         response = requests.request("GET", brightdata_url, headers=headers, params=querystring)
         response.raise_for_status()
@@ -222,7 +232,7 @@ def clean_data(snapshot_id: str) -> pd.DataFrame:
     data = get_response(snapshot_id)
     df = pd.DataFrame(data)
     df = df.astype({'post_id': 'string', 'profile_id': 'string', 'create_time': 'string', 'play_count': 'string'})
-    
+
     logger.info(f"Received {len(df)} records from Brightdata")
     df = fix_create_time(df)
     df = apply_filters(df)
@@ -230,22 +240,23 @@ def clean_data(snapshot_id: str) -> pd.DataFrame:
     logger.info(f"Cleaned data has {len(df)} records")
     return df
 
+
 def lambda_handler(event, context):
-    logger.info("Received event: %s", json.dumps(event))
-    
+    logger.info("Event received: %s", json.dumps(event))
+
     snapshot_id = event.get('snapshot_id', None)
     status = event.get('status', 'fail')
-    
+
     if status == 'fail':
         err_message = "Failed status received"
         logger.error(err_message)
         raise Exception(err_message)
-    
+
     if snapshot_id is None:
         err_message = "Snapshot ID is missing"
         logger.error(err_message)
         raise Exception(err_message)
-    
+
     try:
         df = clean_data(snapshot_id)
         posts = df.to_dict(orient='records')
