@@ -4,9 +4,6 @@
   "details": {
     "response": {
       "message": "Records sent for ingestion",
-      "message_ids": [
-        "acf1140e-b787-445f-ad38-1016aadcf152"
-      ],
       "request_id": "870a2f41-c794-40e4-82e3-1f7b87442be3",
       "status": "success"
     }

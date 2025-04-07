@@ -76,6 +76,12 @@ def generate_slack_message(event, context):
     aws_region = context.invoked_function_arn.split(':')[3]
     console_link = f"https://{aws_region}.console.aws.amazon.com/states/home?region={aws_region}#/executions/details/{execution_id}"
 
+    success_section = ""
+    if details and status == 'success':
+        request_id = details.get('response', {}).get('request_id', None)
+        if request_id:
+            success_section = f"*Ingestion Details* \n\nRequest ID: {request_id}"
+
     slack_message = {
         "blocks": [
             {
@@ -93,6 +99,15 @@ def generate_slack_message(event, context):
             }
         ]
     }
+
+    if success_section:
+        slack_message["blocks"].append({
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": success_section
+            }
+        })
 
     if error_section:
         slack_message["blocks"].append({
