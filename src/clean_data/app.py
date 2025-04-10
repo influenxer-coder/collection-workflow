@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 import requests
@@ -12,7 +12,7 @@ logger.setLevel(logging.INFO)
 BEARER_TOKEN = os.getenv("BEARER_TOKEN", "")
 
 filters = {
-    "region": "US",
+    "region": ["US", "CA"],
     "create_time": "2024-06-01"
 }
 
@@ -54,7 +54,7 @@ new_columns = [
 ]
 
 
-def restructure(df: pd.DataFrame):
+def restructure(df: pd.DataFrame) -> pd.DataFrame:
     """
     Restructure the dataframe
     Args:
@@ -92,7 +92,7 @@ def restructure_records(df: pd.DataFrame, cols: List[str], replace_with) -> pd.D
     return df
 
 
-def add_new_columns(df):
+def add_new_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
     Add new columns to the dataframe
     Args:
@@ -110,7 +110,7 @@ def add_new_columns(df):
     return df
 
 
-def get_play_level(play_count):
+def get_play_level(play_count: int) -> str:
     """
     Get the play level
     Args:
@@ -127,7 +127,7 @@ def get_play_level(play_count):
         return "high"
 
 
-def get_influencer_type(profile_followers):
+def get_influencer_type(profile_followers: int) -> str:
     """
     Get the influencer type
     Args:
@@ -146,7 +146,7 @@ def get_influencer_type(profile_followers):
         return "nano"
 
 
-def get_search_term(discovery: dict):
+def get_search_term(discovery: dict) -> str:
     """
     Get the search term
     Args:
@@ -158,7 +158,7 @@ def get_search_term(discovery: dict):
     return discovery.get("search_keyword", "")
 
 
-def fix_biography(biography):
+def fix_biography(biography: Optional[str]) -> str:
     """
     Fix the biography
     Args:
@@ -172,7 +172,7 @@ def fix_biography(biography):
     return biography.replace("\n", " ").replace("\r", " ")
 
 
-def fix_create_time(df: pd.DataFrame):
+def fix_create_time(df: pd.DataFrame) -> pd.DataFrame:
     """
     Fix the create_time column
     Args:
@@ -188,7 +188,7 @@ def fix_create_time(df: pd.DataFrame):
     return df
 
 
-def apply_filters(df: pd.DataFrame):
+def apply_filters(df: pd.DataFrame) -> pd.DataFrame:
     """
     Apply filters to the dataframe
     Args:
@@ -200,9 +200,25 @@ def apply_filters(df: pd.DataFrame):
     if df.empty:
         return df
 
-    df = df[df["region"] == filters["region"]]
+    df = df[df["region"].isin(filters["region"])]
     cutoff_date = pd.to_datetime(filters["create_time"], utc=True)
     df = df[df["create_time"] > cutoff_date]
+    return df
+
+
+def apply_filters_on_restructured_data(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Apply filters on the restructured data
+    Args:
+        df: A Pandas dataframe
+
+    Returns:
+        df: A Pandas dataframe
+    """
+    if df.empty:
+        return df
+
+    df = df[~(df['plays'] == 'low')]
     return df
 
 
@@ -237,6 +253,7 @@ def clean_data(snapshot_id: str) -> pd.DataFrame:
     df = fix_create_time(df)
     df = apply_filters(df)
     df = restructure(df)
+    df = apply_filters_on_restructured_data(df)
     logger.info(f"Cleaned data has {len(df)} records")
     return df
 

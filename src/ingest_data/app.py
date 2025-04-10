@@ -15,7 +15,7 @@ def lambda_handler(event, context):
     if api_base_url is None:
         raise ValueError("API Base URL is missing")
 
-    ingestion_url = f"{api_base_url}/ingest"
+    ingestion_url = f"{api_base_url}/ingest/videos"
     headers = {'Content-Type': 'application/json'}
     try:
         response = requests.post(
